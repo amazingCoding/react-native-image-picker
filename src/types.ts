@@ -27,6 +27,7 @@ export interface ImagePickerResponse {
   type?: string; //TODO
   fileName?: string;
   duration?: number;
+  thumbnail?:string
 }
 
 export type PhotoQuality =
