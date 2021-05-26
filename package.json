@@ -36,10 +36,6 @@
     "image",
     "picker"
   ],
-  "peerDependencies": {
-    "react": "*",
-    "react-native": "*"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/react-native-image-picker/react-native-image-picker.git"
