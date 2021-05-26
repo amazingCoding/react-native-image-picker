@@ -224,11 +224,34 @@ RCT_EXPORT_METHOD(launchImageLibrary:(NSDictionary *)options callback:(RCTRespon
     }
     
     NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
+    
     AVAsset *asset = [AVAsset assetWithURL:videoDestinationURL];
+    // add thumbnail
+    NSString *imagePath =  [self generateThumbImage:videoDestinationURL];
+    if(imagePath){
+        response[@"thumbnail"] = imagePath;
+    }
     response[@"duration"] = @(roundf(CMTimeGetSeconds(asset.duration)));
     response[@"uri"] = videoDestinationURL.absoluteString;
     
     self.callback(@[response]);
+}
+- (NSString *) generateThumbImage: (NSURL *)url{
+    AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:url options:nil];
+    AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
+    generator.appliesPreferredTrackTransform = YES;
+    NSError *err = NULL;
+    CMTime time = CMTimeMake(1, 60);
+           
+    CGImageRef imgRef = [generator copyCGImageAtTime:time actualTime:NULL error:&err];
+    UIImage *thumbnail = [UIImage imageWithCGImage:imgRef];
+    NSString* tempDirectory = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory,NSUserDomainMask,YES) lastObject];
+    NSData *data = UIImageJPEGRepresentation(thumbnail, 1.0);
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *fullPath = [tempDirectory stringByAppendingPathComponent: [NSString stringWithFormat:@"thumb-%@.jpg", [[NSProcessInfo processInfo] globallyUniqueString]]];
+    [fileManager createFileAtPath:fullPath contents:data attributes:nil];
+    CGImageRelease(imgRef);
+    return fullPath;
 }
 
 #pragma mark - Helpers
