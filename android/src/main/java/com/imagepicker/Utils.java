@@ -14,10 +14,12 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Base64;
+import android.util.Log;
 import android.webkit.MimeTypeMap;
 
 import androidx.core.app.ActivityCompat;
@@ -31,6 +33,7 @@ import com.facebook.react.bridge.WritableMap;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -369,12 +372,50 @@ public class Utils {
 
     static ReadableMap getVideoResponseMap(Uri uri, Context context) {
         String fileName = uri.getLastPathSegment();
+        // add thumbnail
+        String thumbnail = generateThumbImage(uri);
         WritableMap map = Arguments.createMap();
+        if(thumbnail != null && !thumbnail.isEmpty()){
+            map.putString("thumbnail", thumbnail);
+        }
         map.putString("uri", uri.toString());
         map.putDouble("fileSize", getFileSize(uri, context));
         map.putInt("duration", getDuration(uri, context));
         map.putString("fileName", fileName);
         return map;
+    }
+    static String generateThumbImage(Uri uri){
+        String path = uri.getPath();
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        retriever.setDataSource(path);
+        Bitmap image = retriever.getFrameAtTime(1000000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+        String fullPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/thumb";
+        try {
+            File dir = new File(fullPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            OutputStream fOut = null;
+            String fileName = "thumb-" + UUID.randomUUID().toString() + ".jpeg";
+            File file = new File(fullPath, fileName);
+            file.createNewFile();
+            fOut = new FileOutputStream(file);
+
+            image.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
+            fOut.flush();
+            fOut.close();
+            WritableMap map = Arguments.createMap();
+            map.putString("path", "file://" + fullPath + '/' + fileName);
+            map.putDouble("width", image.getWidth());
+            map.putDouble("height", image.getHeight());
+
+            return "file://" + fullPath + '/' + fileName;
+
+        } catch (Exception e) {
+            Log.e("E_RNThumnail_ERROR", e.getMessage());
+            return null;
+        }
     }
 
     static ReadableMap getErrorMap(String errCode, String errMsg) {
